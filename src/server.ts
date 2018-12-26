@@ -1,10 +1,19 @@
-import { Server } from 'hapi';
+import { Server, ServerInjectOptions, ServerInjectResponse } from 'hapi';
 import { serviceHandler } from './service-handler';
+import * as Path from 'path';
+import { dbClient } from './database';
 
 // Create a server with a host and port
 const server = new Server({
     host: 'localhost',
-    port: 8000
+    port: 8000,
+    debug: { request: ['implementation'] },
+    routes: {
+        cors: { origin: ['*'] },
+        files: {
+            relativeTo: Path.join(__dirname, 'assets')
+        }
+    }
 });
 
 // Define routes
@@ -37,16 +46,21 @@ const routes = [
 // Add routes
 server.route(routes);
 
-// Unhandled rejection handler
-process.on('unhandledRejection', (err) => {
-    console.log(err);
-    process.exit(1);
+// Catch unhandling rejected promises
+process.on('unhandledRejection', (reason: any) => {
+    console.error(`unhandledRejection ${reason}`);
+});
+// Catch unhandling unexpected exceptions
+process.on('uncaughtException', (error: Error) => {
+    console.error(`uncaughtException ${error.message}`);
 });
 
 // Start the server
-export const start = async function () {
+export const serverStart = async function() {
 
     try {
+        await dbClient.connect();
+
         await server.start();
     } catch (err) {
         console.log(err);
@@ -54,4 +68,19 @@ export const start = async function () {
     }
 
     console.log('Server running at:', server.info.uri);
+};
+
+export const serverStop = async function() {
+
+    try {
+        await server.stop();
+    } catch (err) {
+        console.log(err);
+    }
+
+    console.log('Server at ', server.info.uri, ' stopped');
+};
+
+export const serverInject = async function(options: string | ServerInjectOptions): Promise<ServerInjectResponse> {
+    return server.inject(options);
 };

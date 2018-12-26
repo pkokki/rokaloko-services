@@ -5,25 +5,15 @@ const url = 'mongodb://localhost:27017';
 // Database Name
 const dbName = 'rokaloko';
 
-async function execute(func: (db: Db) => Promise<any>) {
-    const client = new MongoClient(url);
+const client = new MongoClient(url, { useNewUrlParser: true });
 
-    try {
-        await client.connect();
+async function connect() : Promise<void> {
+    await client.connect();
 
-        const db = client.db(dbName);
-
-        const result = await func(db);
-
-        return result;
-    } catch (err) {
-        console.log(err.stack);
-    }
-
-    // Close connection
-    client.close();
+    dbClient.db = client.db(dbName);
 }
 
-export const database = {
-    execute: execute
+export const dbClient = {
+    connect: connect,
+    db: null
 };
